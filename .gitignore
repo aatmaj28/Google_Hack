@@ -9,3 +9,4 @@ build/
 baml_client/
 results.jsonl
 .DS_Store
+*.log
