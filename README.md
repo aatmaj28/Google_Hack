@@ -1,4 +1,6 @@
-# Universal Log Triage Pipeline
+# 🔊 Log Whisperers
+
+### Universal Log Triage Pipeline
 
 **One command turns ANY raw log file into validated JSON incident cards — no per-format configuration.**
 
