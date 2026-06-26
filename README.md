@@ -11,7 +11,7 @@ python triage.py datasets/BGL_2k.log       # supercomputer RAS logs
 
 Same code, 16 wildly different log formats, zero hardcoded fields. Drop in a log it has never seen and it discovers the structure at runtime, finds the events that actually matter, and emits a clean, schema-validated incident card.
 
-> **Best-of-three synthesis.** This branch combines the strongest ideas from all three team approaches: the universal discovery + rarity detection + dual backends (base), **temporal burst context** + **benign-skip** + **streaming output** (from `shivu`), and a **run-level summary** + **severity-sorted output** (from `main`).
+> **Best-of-three synthesis.** This branch combines the strongest ideas from all three team approaches: the universal discovery + rarity detection (base), **temporal burst context** + **streaming output** (from `shivu`), and a **run-level summary** + **severity-sorted output** (from `main`) — plus an **automatic backend failover** (vLLM → local Ollama → deterministic) so a dropped tunnel never stops the demo.
 
 ## What makes it unique
 
@@ -69,15 +69,15 @@ uv sync                       # install deps
 uv run baml-cli generate      # (re)generate the BAML client from baml_src/
 ```
 
-Point at Gemma — two interchangeable backends, chosen with `LLM_BACKEND`:
+Point at Gemma. By default (`LLM_BACKEND=auto`) it tries vLLM first and falls
+back to local Ollama automatically — just set both endpoints:
 
 ```bash
-# Ollama (local / LAN)
-export LLM_BACKEND=ollama OLLAMA_BASE_URL=http://localhost:11434/v1 GEMMA_MODEL=gemma4:e4b
-
-# vLLM (OpenAI-compatible, e.g. gemma-3-12b-it)
-export LLM_BACKEND=vllm VLLM_BASE_URL=http://localhost:8001/v1 VLLM_MODEL=google/gemma-3-12b-it
+export VLLM_BASE_URL=http://localhost:8001/v1  VLLM_MODEL=google/gemma-3-12b-it   # primary
+export OLLAMA_BASE_URL=http://localhost:11434/v1  GEMMA_MODEL=gemma4:e4b           # fallback
 ```
+
+Force one backend with `LLM_BACKEND=vllm` or `LLM_BACKEND=ollama`.
 
 ## Usage
 

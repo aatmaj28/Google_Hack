@@ -13,23 +13,25 @@ import json
 import os
 import re
 
-# Two interchangeable Gemma backends, chosen with LLM_BACKEND (ollama | vllm).
-#   ollama -> teammate's local/LAN box   (GemmaOllama client)
-#   vllm   -> OpenAI-compatible vLLM      (GemmaVLLM client, google/gemma-3-12b-it)
+# Gemma backend, chosen with LLM_BACKEND:
+#   auto (default) -> GemmaFailover: try vLLM, fall back to local Ollama
+#   vllm           -> GemmaVLLM only (google/gemma-3-12b-it)
+#   ollama         -> GemmaOllama only (local/LAN box)
 # Defaults are placeholders; override the relevant env vars for your endpoint.
 os.environ.setdefault("OLLAMA_BASE_URL", "http://localhost:11434/v1")
-os.environ.setdefault("GEMMA_MODEL", "gemma2:2b")
+os.environ.setdefault("GEMMA_MODEL", "gemma4:e4b")   # the local model we keep loaded
 os.environ.setdefault("VLLM_BASE_URL", "http://vllm-gemma3-12b:8001/v1")
 os.environ.setdefault("VLLM_MODEL", "google/gemma-3-12b-it")
 # Keep BAML logs off stdout so JSON output stays clean (set BAML_LOG=info to debug).
 os.environ.setdefault("BAML_LOG", "off")
 
-_BACKEND_TO_CLIENT = {"ollama": "GemmaOllama", "vllm": "GemmaVLLM"}
+# auto -> None means "use the function's static client" (GemmaFailover chain).
+_BACKEND_TO_CLIENT = {"vllm": "GemmaVLLM", "ollama": "GemmaOllama", "auto": None}
 
 
 def _client_registry():
-    """Pick the BAML client matching LLM_BACKEND. Returns None for the default."""
-    backend = os.environ.get("LLM_BACKEND", "ollama").lower()
+    """Pick the BAML client matching LLM_BACKEND. None -> default failover chain."""
+    backend = os.environ.get("LLM_BACKEND", "auto").lower()
     client_name = _BACKEND_TO_CLIENT.get(backend)
     if not client_name:
         return None
@@ -130,15 +132,18 @@ def triage_candidates(candidates: list[dict], use_model: bool = True,
             try:
                 opts = {"client_registry": registry} if registry else {}
                 result = b.TriageIncident(json.dumps(cand), baml_options=opts)
-                if result is None:
-                    # model judged this rare-but-routine event benign -> drop it
-                    continue
                 card = result.model_dump()
                 # normalize enums to plain strings for JSON output
                 card["error_severity"] = getattr(card["error_severity"], "value", card["error_severity"])
                 card["anomaly_type"] = getattr(card["anomaly_type"], "value", card["anomaly_type"])
+                # backfill fields the model may leave null from what the engine extracted
+                rep = cand["representative"]
+                if not card.get("service_name"):
+                    card["service_name"] = rep.get("component") or "unknown"
+                if not card.get("timestamp"):
+                    card["timestamp"] = rep.get("timestamp") or ""
                 if not card.get("suggested_remediation"):
-                    card["suggested_remediation"] = _remediation_for(cand["representative"].get("message", ""))
+                    card["suggested_remediation"] = _remediation_for(rep.get("message", ""))
                 card["_source"] = "model"
             except Exception as exc:
                 card = fallback_card(cand)

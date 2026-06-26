@@ -23,8 +23,8 @@ class CausalStep {
 }
 
 class IncidentCard {
-  service_name string @description("service/component that emitted this, inferred from the event; do not invent")
-  timestamp string @description("ISO timestamp of the event, copied verbatim from the input")
+  service_name string? @description("service/component that emitted this, inferred from the event; null only if truly indeterminable")
+  timestamp string? @description("ISO timestamp of the event, copied verbatim from the input")
   error_severity Severity
   anomaly_type AnomalyType
   root_cause string @description("one-sentence plain-English explanation of what actually broke")
@@ -36,11 +36,8 @@ class IncidentCard {
   @@assert(valid_confidence, {{ this.confidence >= 0.0 and this.confidence <= 1.0 }})
 }
 
-// Returns null when the event turns out to be benign after seeing its context
-// (benign-skip idea borrowed from the `shivu` branch) — cuts false positives
-// on rare-but-routine events.
-function TriageIncident(event_json: string) -> IncidentCard? {
-  client GemmaOllama
+function TriageIncident(event_json: string) -> IncidentCard {
+  client GemmaFailover
   prompt #"
     {{ _.role("user") }}
     You are a production log-triage engine. You receive ONE pre-detected
@@ -59,9 +56,7 @@ function TriageIncident(event_json: string) -> IncidentCard? {
       order. If there is no sequence to draw from, return an empty causal_chain.
     - suggested_remediation must be a specific action an on-call engineer can
       take, grounded in this event - not generic advice.
-    - If, after reading the context, this event is actually benign / routine
-      (normal lifecycle, expected message, no real failure), return null.
-    - Otherwise return ONLY the structured object. No prose, no markdown fences.
+    - Return ONLY the structured object. No prose, no markdown fences.
 
     {{ ctx.output_format }}
 

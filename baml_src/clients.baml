@@ -1,10 +1,19 @@
-// Two interchangeable Gemma backends. Pick one at runtime with LLM_BACKEND
-// (ollama | vllm) — see logtriage/triage.py. Both speak the OpenAI-compatible
-// API, so both use the openai-generic provider.
+// Gemma backends. By default the pipeline uses GemmaFailover (vLLM first,
+// then local Ollama), so a dropped tunnel mid-demo silently keeps using Gemma.
+// Override with LLM_BACKEND (vllm | ollama | auto) — see logtriage/triage.py.
+// All speak the OpenAI-compatible API -> openai-generic provider.
 //
 // IMPORTANT (Gemma gotcha): Gemma's chat template rejects a "system" role.
 // The TriageIncident prompt is therefore emitted as a single *user* message
 // (see {{ _.role("user") }} in triage.baml), which is safe for both backends.
+
+// --- Failover chain (DEFAULT): try vLLM, fall back to local Ollama ----------
+client<llm> GemmaFailover {
+  provider fallback
+  options {
+    strategy [GemmaVLLM, GemmaOllama]
+  }
+}
 
 // --- Backend 1: local / LAN Ollama -----------------------------------------
 //   OLLAMA_BASE_URL  e.g. http://localhost:11434/v1  (or http://<lan-ip>:11434/v1)
@@ -37,13 +46,14 @@ client<llm> GemmaVLLM {
   }
 }
 
+// One quick retry only, so failing over from a dead vLLM to Ollama is snappy.
 retry_policy Exponential {
-  max_retries 2
+  max_retries 1
   strategy {
     type exponential_backoff
     options {
       multiplier 2
-      max_delay_ms 5000
+      max_delay_ms 2000
     }
   }
 }

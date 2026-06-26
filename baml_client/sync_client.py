@@ -96,7 +96,7 @@ class BamlSyncClient:
 
     def TriageIncident(self, event_json: str,
         baml_options: BamlCallOptions = {},
-    ) -> typing.Optional["types.IncidentCard"]:
+    ) -> types.IncidentCard:
         # Check if on_tick is provided
         if 'on_tick' in baml_options:
             __stream__ = self.stream.TriageIncident(event_json=event_json,
@@ -107,7 +107,7 @@ class BamlSyncClient:
             __result__ = self.__options.merge_options(baml_options).call_function_sync(function_name="TriageIncident", args={
                 "event_json": event_json,
             })
-            return typing.cast(typing.Optional["types.IncidentCard"], __result__.cast_to(types, types, stream_types, False, __runtime__))
+            return typing.cast(types.IncidentCard, __result__.cast_to(types, types, stream_types, False, __runtime__))
     
 
 
@@ -119,14 +119,14 @@ class BamlStreamClient:
 
     def TriageIncident(self, event_json: str,
         baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[typing.Optional["stream_types.IncidentCard"], typing.Optional["types.IncidentCard"]]:
+    ) -> baml_py.BamlSyncStream[stream_types.IncidentCard, types.IncidentCard]:
         __ctx__, __result__ = self.__options.merge_options(baml_options).create_sync_stream(function_name="TriageIncident", args={
             "event_json": event_json,
         })
-        return baml_py.BamlSyncStream[typing.Optional["stream_types.IncidentCard"], typing.Optional["types.IncidentCard"]](
+        return baml_py.BamlSyncStream[stream_types.IncidentCard, types.IncidentCard](
           __result__,
-          lambda x: typing.cast(typing.Optional["stream_types.IncidentCard"], x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(typing.Optional["types.IncidentCard"], x.cast_to(types, types, stream_types, False, __runtime__)),
+          lambda x: typing.cast(stream_types.IncidentCard, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.IncidentCard, x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
     

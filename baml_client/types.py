@@ -61,8 +61,8 @@ class CausalStep(BaseModel):
     event: str = Field(description='what happened at this step, in plain English')
 
 class IncidentCard(BaseModel):
-    service_name: str = Field(description='service/component that emitted this, inferred from the event; do not invent')
-    timestamp: str = Field(description='ISO timestamp of the event, copied verbatim from the input')
+    service_name: typing.Optional[str] = Field(default=None, description='service/component that emitted this, inferred from the event; null only if truly indeterminable')
+    timestamp: typing.Optional[str] = Field(default=None, description='ISO timestamp of the event, copied verbatim from the input')
     error_severity: Severity
     anomaly_type: AnomalyType
     root_cause: str = Field(description='one-sentence plain-English explanation of what actually broke')
