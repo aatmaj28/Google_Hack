@@ -1,0 +1,20 @@
+[project]
+name = "logtriage"
+version = "0.1.0"
+description = "Universal log triage: any raw log -> validated JSON incident cards, no per-format config"
+requires-python = ">=3.12"
+dependencies = [
+    "baml-py>=0.223.0",
+    "drain3>=0.9.11",
+    "pydantic>=2.13.4",
+    "python-dateutil>=2.9.0.post0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

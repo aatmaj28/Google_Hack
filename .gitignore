@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Outputs / scratch
+*.result.json
+demo_output*.json
+.DS_Store
+
+# BAML logs
+baml_logs/
