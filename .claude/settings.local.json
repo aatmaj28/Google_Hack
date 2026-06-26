@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.boundaryml.com)",
+      "WebFetch(domain:www.boundaryml.com)",
+      "Bash(python3 *)",
+      "Bash(.venv/bin/baml-cli generate *)"
+    ]
+  }
+}

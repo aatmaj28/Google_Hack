@@ -1,0 +1,20 @@
+[project]
+name = "triage"
+version = "0.1.0"
+description = "Local log triage pipeline: streaming logs -> Gemma -> validated JSON anomalies"
+requires-python = ">=3.10"
+dependencies = [
+    "baml-py>=0.223.0",
+    "pydantic>=2.0",
+    "typing_extensions>=4.0",
+]
+
+[project.scripts]
+triage = "triage.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["triage"]
