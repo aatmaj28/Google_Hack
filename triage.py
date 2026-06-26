@@ -26,6 +26,8 @@ def main() -> int:
                     help="skip the LLM and use deterministic fallback cards only")
     ap.add_argument("--stream", action="store_true",
                     help="emit each incident as a JSONL line the moment it is produced")
+    ap.add_argument("--compare-grep", action="store_true",
+                    help="show how many anomalies a naive keyword grep would miss vs this engine")
     args = ap.parse_args()
 
     # Streaming mode: print each card live (JSONL), then a summary to stderr.
@@ -36,6 +38,13 @@ def main() -> int:
 
     result = run(args.logfile, top_k=args.top_k, use_model=not args.no_model,
                  on_incident=on_incident)
+
+    if args.compare_grep:
+        g = result["grep_comparison"]
+        print(f"\n  Keyword grep would find : {g['grep_would_find']} anomaly types", file=sys.stderr)
+        print(f"  This engine found       : {g['engine_found']} anomaly types", file=sys.stderr)
+        print(f"  >>> grep would MISS      : {g['grep_would_miss']} "
+              f"(rarity-flagged, no error keyword)\n", file=sys.stderr)
 
     if args.stream:
         print(f"[summary] {result['summary']}", file=sys.stderr)

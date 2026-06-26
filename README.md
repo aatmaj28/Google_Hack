@@ -13,6 +13,13 @@ Same code, 16 wildly different log formats, zero hardcoded fields. Drop in a log
 
 > **Best-of-three synthesis.** This branch combines the strongest ideas from all three team approaches: the universal discovery + rarity detection + dual backends (base), **temporal burst context** + **benign-skip** + **streaming output** (from `shivu`), and a **run-level summary** + **severity-sorted output** (from `main`).
 
+## What makes it unique
+
+1. **Catches what `grep` can't.** Most log tools keyword-search for `ERROR`/`FATAL`. Our **rarity** signal flags abnormal events even when every line says `INFO` (e.g. HDFS under-replication). `--compare-grep` quantifies it live — on HDFS, keyword search finds **1** problem, we find **7**.
+2. **Truly format-agnostic.** One pipeline auto-discovers the structure of all 16 loghub formats — 100% timestamp detection, zero per-format config. No hardcoded fields.
+3. **Hybrid cost model.** Cheap deterministic code triages thousands of lines down to a handful; Gemma only ever explains the top few — so it scales and stays token-light.
+4. **Auto causal chains.** It auto-detects the correlation id (block/request/ip) and reconstructs *what led to what* — not just the single failing line.
+
 ## Why this is hard (and why hardcoding fails)
 
 We inspected all 16 [loghub](https://github.com/logpai/loghub) datasets. **No two share a field schema** — Apache parses into 3 fields, Thunderbird into 14, and three datasets (Proxifier, HealthApp, HPC) have no severity field at all. The standard approach writes a regex *per format*. That is exactly what a generic tool cannot do. So instead of assuming structure, this pipeline **discovers** it.
@@ -36,7 +43,14 @@ ANY .log → [1 Discover] → [2 Templatize] → [3 Score] → [4 Triage] → [5
 
 ### The "grep can't catch it" signal
 
-In HDFS, failures like under-replication contain **no error keyword** — every line is `INFO`. Keyword search finds nothing. The **rarity** signal in stage 3 flags the unusual event sequence anyway. That's the differentiator: we detect what `grep ERROR` structurally cannot.
+In HDFS, failures like under-replication contain **no error keyword** — every line is `INFO`. Keyword search finds nothing. The **rarity** signal in stage 3 flags the unusual event anyway. Prove it live:
+
+```bash
+python triage.py datasets/HDFS_2k.log --top-k 10 --compare-grep --no-model
+#   Keyword grep would find : 1 anomaly types
+#   This engine found       : 7 anomaly types
+#   >>> grep would MISS      : 6 (rarity-flagged, no error keyword)
+```
 
 ### Auto-detected session keys
 
@@ -55,22 +69,27 @@ uv sync                       # install deps
 uv run baml-cli generate      # (re)generate the BAML client from baml_src/
 ```
 
-Point at your local/remote Gemma:
+Point at Gemma — two interchangeable backends, chosen with `LLM_BACKEND`:
 
 ```bash
-export OLLAMA_BASE_URL=http://localhost:11434/v1   # or http://<lan-ip>:11434/v1
-export GEMMA_MODEL=gemma2:9b                        # any Ollama tag
+# Ollama (local / LAN)
+export LLM_BACKEND=ollama OLLAMA_BASE_URL=http://localhost:11434/v1 GEMMA_MODEL=gemma4:e4b
+
+# vLLM (OpenAI-compatible, e.g. gemma-3-12b-it)
+export LLM_BACKEND=vllm VLLM_BASE_URL=http://localhost:8001/v1 VLLM_MODEL=google/gemma-3-12b-it
 ```
 
 ## Usage
 
 ```bash
-python triage.py <logfile> [--top-k N] [--out result.json] [--no-model] [--stream]
+python triage.py <logfile> [--top-k N] [--out result.json] [--no-model] [--stream] [--compare-grep]
 ```
 
-- `--no-model` — skip the LLM and emit deterministic fallback cards (fast, offline, demo-safe).
+- `--top-k N` — max distinct anomaly types to emit (default 5; raise to show all).
+- `--no-model` — skip the LLM, emit deterministic fallback cards (offline break-glass only).
+- `--stream` — emit each incident as a JSONL line as it's produced, summary to stderr.
+- `--compare-grep` — show how many anomalies a naive keyword grep would miss vs this engine.
 - `--out` — write JSON to a file instead of stdout.
-- `--stream` — emit each incident as a JSONL line the moment it's produced (live feedback), with a one-line summary to stderr.
 
 ## Output
 

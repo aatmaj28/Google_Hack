@@ -52,6 +52,24 @@ def _severity_points(rank: int) -> float:
     return {5: 3.0, 4: 2.0, 3: 0.6}.get(rank, 0.0)
 
 
+def grep_comparison(candidates: list[dict]) -> dict:
+    """How many flagged anomalies a naive keyword `grep` would catch vs miss.
+
+    A candidate is "grep-visible" if it carries a severity or keyword signal;
+    if it was flagged by rarity ALONE, a keyword search would never find it.
+    This quantifies our core edge (e.g. HDFS, where anomalies are all INFO).
+    """
+    visible = sum(
+        1 for c in candidates
+        if any(s == "keyword" or s.startswith("severity:") for s in c["signals"])
+    )
+    return {
+        "engine_found": len(candidates),
+        "grep_would_find": visible,
+        "grep_would_miss": len(candidates) - visible,
+    }
+
+
 def score_records(records: list[LogRecord], vocab: dict[str, dict]) -> None:
     """Annotate each record with extras['score'] and extras['signals']."""
     total = max(len(records), 1)

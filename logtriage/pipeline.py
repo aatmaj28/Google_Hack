@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import time
 
-from .anomaly import assemble_candidates, detect_session_key
+from .anomaly import assemble_candidates, detect_session_key, grep_comparison
 from .discover import parse_file
 from .templatize import templatize
 from .triage import triage_candidates
@@ -30,6 +30,7 @@ def run(path: str, top_k: int = 5, use_model: bool = True, on_incident=None) -> 
     vocab = templatize(records)
     session = detect_session_key(records)
     candidates = assemble_candidates(records, vocab, top_k=top_k)
+    grep = grep_comparison(candidates)
     incidents = triage_candidates(candidates, use_model=use_model, on_incident=on_incident)
 
     # Sort: highest severity first, then by anomaly score.
@@ -48,7 +49,9 @@ def run(path: str, top_k: int = 5, use_model: bool = True, on_incident=None) -> 
             "session_key": session[0] if session else None,
             "candidates_triaged": len(incidents),
             "has_critical_issues": has_critical,
+            "grep_would_miss": grep["grep_would_miss"],
             "elapsed_sec": round(time.time() - t0, 2),
         },
+        "grep_comparison": grep,
         "incidents": incidents,
     }

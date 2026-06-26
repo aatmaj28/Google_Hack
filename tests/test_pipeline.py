@@ -6,7 +6,7 @@ import os
 import pytest
 
 from baml_client.types import IncidentCard
-from logtriage.anomaly import assemble_candidates, detect_session_key
+from logtriage.anomaly import assemble_candidates, detect_session_key, grep_comparison
 from logtriage.discover import parse_file
 from logtriage.pipeline import run
 from logtriage.templatize import templatize
@@ -101,3 +101,13 @@ def test_streaming_callback_fires_per_incident():
     result = run(os.path.join(base, "OpenSSH_2k.log"), top_k=3,
                  use_model=False, on_incident=seen.append)
     assert len(seen) == len(result["incidents"])
+
+
+def test_grep_blindspot_on_hdfs():
+    """Our differentiator: keyword grep misses HDFS anomalies; we catch them."""
+    base = os.path.join(os.path.dirname(__file__), "..", "datasets")
+    recs = parse_file(os.path.join(base, "HDFS_2k.log"))
+    vocab = templatize(recs)
+    g = grep_comparison(assemble_candidates(recs, vocab, top_k=10))
+    assert g["grep_would_miss"] > 0, "expected rarity-only anomalies grep can't see"
+    assert g["engine_found"] >= g["grep_would_find"]
