@@ -84,7 +84,7 @@ class BamlAsyncClient:
 
     async def TriageIncident(self, event_json: str,
         baml_options: BamlCallOptions = {},
-    ) -> types.IncidentCard:
+    ) -> typing.Optional["types.IncidentCard"]:
         # Check if on_tick is provided
         if 'on_tick' in baml_options:
             # Use streaming internally when on_tick is provided
@@ -96,7 +96,7 @@ class BamlAsyncClient:
             __result__ = await self.__options.merge_options(baml_options).call_function_async(function_name="TriageIncident", args={
                 "event_json": event_json,
             })
-            return typing.cast(types.IncidentCard, __result__.cast_to(types, types, stream_types, False, __runtime__))
+            return typing.cast(typing.Optional["types.IncidentCard"], __result__.cast_to(types, types, stream_types, False, __runtime__))
     
 
 
@@ -108,14 +108,14 @@ class BamlStreamClient:
 
     def TriageIncident(self, event_json: str,
         baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlStream[stream_types.IncidentCard, types.IncidentCard]:
+    ) -> baml_py.BamlStream[typing.Optional["stream_types.IncidentCard"], typing.Optional["types.IncidentCard"]]:
         __ctx__, __result__ = self.__options.merge_options(baml_options).create_async_stream(function_name="TriageIncident", args={
             "event_json": event_json,
         })
-        return baml_py.BamlStream[stream_types.IncidentCard, types.IncidentCard](
+        return baml_py.BamlStream[typing.Optional["stream_types.IncidentCard"], typing.Optional["types.IncidentCard"]](
           __result__,
-          lambda x: typing.cast(stream_types.IncidentCard, x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(types.IncidentCard, x.cast_to(types, types, stream_types, False, __runtime__)),
+          lambda x: typing.cast(typing.Optional["stream_types.IncidentCard"], x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(typing.Optional["types.IncidentCard"], x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
     

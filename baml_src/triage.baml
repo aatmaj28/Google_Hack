@@ -36,7 +36,10 @@ class IncidentCard {
   @@assert(valid_confidence, {{ this.confidence >= 0.0 and this.confidence <= 1.0 }})
 }
 
-function TriageIncident(event_json: string) -> IncidentCard {
+// Returns null when the event turns out to be benign after seeing its context
+// (benign-skip idea borrowed from the `shivu` branch) — cuts false positives
+// on rare-but-routine events.
+function TriageIncident(event_json: string) -> IncidentCard? {
   client GemmaOllama
   prompt #"
     {{ _.role("user") }}
@@ -44,15 +47,21 @@ function TriageIncident(event_json: string) -> IncidentCard {
     anomalous event (already extracted from a much larger log) as JSON, and you
     diagnose it into a structured incident card.
 
+    The event JSON may include "context_lines" (the surrounding burst of log
+    lines, including any multi-line stack trace) and a "session" timeline. Use
+    them to find the true root cause and reconstruct the causal chain.
+
     Strict rules:
     - Use ONLY information present in the event below. Never invent a
       service_name, timestamp, or value that is not in the input.
     - Copy the timestamp verbatim from the input.
-    - If an event_sequence / timeline is present, reconstruct causal_chain from
-      it in order. If no timeline is present, return an empty causal_chain.
+    - Reconstruct causal_chain from the session timeline / context_lines in
+      order. If there is no sequence to draw from, return an empty causal_chain.
     - suggested_remediation must be a specific action an on-call engineer can
       take, grounded in this event - not generic advice.
-    - Return ONLY the structured object. No prose, no markdown fences.
+    - If, after reading the context, this event is actually benign / routine
+      (normal lifecycle, expected message, no real failure), return null.
+    - Otherwise return ONLY the structured object. No prose, no markdown fences.
 
     {{ ctx.output_format }}
 

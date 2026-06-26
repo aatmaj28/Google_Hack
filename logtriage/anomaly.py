@@ -22,6 +22,7 @@ import math
 import re
 from collections import defaultdict
 
+from .bursting import burst_around
 from .discover import LogRecord
 
 # Failure words — catch anomalies in logs that carry no severity field at all.
@@ -130,6 +131,7 @@ def assemble_candidates(records: list[LogRecord], vocab: dict[str, dict],
                 by_session[rec.session_key].append(rec)
 
     # Best (highest-scoring) representative per template.
+    idx_of: dict[int, int] = {id(r): i for i, r in enumerate(records)}
     best_per_template: dict[str, LogRecord] = {}
     for rec in records:
         cur = best_per_template.get(rec.template_id)
@@ -157,6 +159,8 @@ def assemble_candidates(records: list[LogRecord], vocab: dict[str, dict],
                 "raw": rec.raw,
                 "message": rec.message,
             },
+            # temporal burst around the line: lead-up + continuation (stack traces)
+            "context_lines": burst_around(records, idx_of[id(rec)]),
             "session": None,
         }
         if rec.session_key and rec.session_key in by_session:

@@ -24,11 +24,24 @@ def main() -> int:
     ap.add_argument("--out", help="write JSON here instead of stdout")
     ap.add_argument("--no-model", action="store_true",
                     help="skip the LLM and use deterministic fallback cards only")
+    ap.add_argument("--stream", action="store_true",
+                    help="emit each incident as a JSONL line the moment it is produced")
     args = ap.parse_args()
 
-    result = run(args.logfile, top_k=args.top_k, use_model=not args.no_model)
-    payload = json.dumps(result, indent=2)
+    # Streaming mode: print each card live (JSONL), then a summary to stderr.
+    on_incident = None
+    if args.stream:
+        def on_incident(card):
+            print(json.dumps(card), flush=True)
 
+    result = run(args.logfile, top_k=args.top_k, use_model=not args.no_model,
+                 on_incident=on_incident)
+
+    if args.stream:
+        print(f"[summary] {result['summary']}", file=sys.stderr)
+        return 0
+
+    payload = json.dumps(result, indent=2)
     if args.out:
         with open(args.out, "w") as fh:
             fh.write(payload)

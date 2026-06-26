@@ -109,7 +109,10 @@ def fallback_card(cand: dict) -> dict:
     }
 
 
-def triage_candidates(candidates: list[dict], use_model: bool = True) -> list[dict]:
+def triage_candidates(candidates: list[dict], use_model: bool = True,
+                      on_incident=None) -> list[dict]:
+    """on_incident(card): optional callback fired as each card is produced
+    (used for streaming output, idea from the `shivu` branch)."""
     cards: list[dict] = []
     b = None
     registry = None
@@ -127,6 +130,9 @@ def triage_candidates(candidates: list[dict], use_model: bool = True) -> list[di
             try:
                 opts = {"client_registry": registry} if registry else {}
                 result = b.TriageIncident(json.dumps(cand), baml_options=opts)
+                if result is None:
+                    # model judged this rare-but-routine event benign -> drop it
+                    continue
                 card = result.model_dump()
                 # normalize enums to plain strings for JSON output
                 card["error_severity"] = getattr(card["error_severity"], "value", card["error_severity"])
@@ -150,4 +156,6 @@ def triage_candidates(candidates: list[dict], use_model: bool = True) -> list[di
             "raw_line": cand["representative"].get("raw", ""),
         }
         cards.append(card)
+        if on_incident is not None:
+            on_incident(card)
     return cards

@@ -11,6 +11,8 @@ python triage.py datasets/BGL_2k.log       # supercomputer RAS logs
 
 Same code, 16 wildly different log formats, zero hardcoded fields. Drop in a log it has never seen and it discovers the structure at runtime, finds the events that actually matter, and emits a clean, schema-validated incident card.
 
+> **Best-of-three synthesis.** This branch combines the strongest ideas from all three team approaches: the universal discovery + rarity detection + dual backends (base), **temporal burst context** + **benign-skip** + **streaming output** (from `shivu`), and a **run-level summary** + **severity-sorted output** (from `main`).
+
 ## Why this is hard (and why hardcoding fails)
 
 We inspected all 16 [loghub](https://github.com/logpai/loghub) datasets. **No two share a field schema** — Apache parses into 3 fields, Thunderbird into 14, and three datasets (Proxifier, HealthApp, HPC) have no severity field at all. The standard approach writes a regex *per format*. That is exactly what a generic tool cannot do. So instead of assuming structure, this pipeline **discovers** it.
@@ -63,11 +65,12 @@ export GEMMA_MODEL=gemma2:9b                        # any Ollama tag
 ## Usage
 
 ```bash
-python triage.py <logfile> [--top-k N] [--out result.json] [--no-model]
+python triage.py <logfile> [--top-k N] [--out result.json] [--no-model] [--stream]
 ```
 
 - `--no-model` — skip the LLM and emit deterministic fallback cards (fast, offline, demo-safe).
 - `--out` — write JSON to a file instead of stdout.
+- `--stream` — emit each incident as a JSONL line the moment it's produced (live feedback), with a one-line summary to stderr.
 
 ## Output
 

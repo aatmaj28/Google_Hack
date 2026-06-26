@@ -25,9 +25,9 @@ class LlmResponseParser:
 
     def TriageIncident(
         self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> types.IncidentCard:
+    ) -> typing.Optional["types.IncidentCard"]:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="TriageIncident", llm_response=llm_response, mode="request")
-        return typing.cast(types.IncidentCard, __result__)
+        return typing.cast(typing.Optional["types.IncidentCard"], __result__)
 
     
 
@@ -39,8 +39,8 @@ class LlmStreamParser:
 
     def TriageIncident(
         self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> stream_types.IncidentCard:
+    ) -> typing.Optional["stream_types.IncidentCard"]:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="TriageIncident", llm_response=llm_response, mode="stream")
-        return typing.cast(stream_types.IncidentCard, __result__)
+        return typing.cast(typing.Optional["stream_types.IncidentCard"], __result__)
 
     
